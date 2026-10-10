@@ -2,7 +2,7 @@
 #SBATCH --job-name=sparq_fig4
 #SBATCH --output=/ourdisk/hpc/wei_r_chen/rahhulse100/dont_archive/SPARQ_figure4_validation/logs/figure4_%j.out
 #SBATCH --error=/ourdisk/hpc/wei_r_chen/rahhulse100/dont_archive/SPARQ_figure4_validation/logs/figure4_%j.err
-#SBATCH --time=7-00:00:00
+#SBATCH --time=48:00:00
 #SBATCH --mem=128G
 #SBATCH --cpus-per-task=4
 
