@@ -49,7 +49,10 @@ sparq_assess_cohort_workflow(sample_data, analysis_function, output_type,
 unless \code{output_dir} is supplied. When present in the assessment, reports
 retain the per-iteration spot-loss audit, the fixed-time reliability decision,
 and the anytime-valid reliability confidence sequence. These are written as
-separate TSV files when \code{output_dir} is supplied. Localization returns a
+separate TSV files when \code{output_dir} is supplied. Every written report
+also includes a reproducibility manifest, package-version table, session
+information, and, for direct spot-level assessments, the input row identifiers
+plus data and identifier fingerprints. Localization returns a
 \code{sparq_fragility} object. Cohort functions return one summary row per
 sample plus a separate failure ledger. \code{sparq_assess_cohort_workflow}
 returns a \code{sparq_cohort_assessment} with summaries, failures, a per-section

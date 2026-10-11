@@ -18,6 +18,9 @@ test_that("workflow assessment selects the scalar comparator and records outputs
   expect_equal(nrow(fit$comparisons), 6)
   expect_equal(length(fit$perturbed_results), 6)
   expect_true(all(c("support_quality", "instability_median") %in% names(fit$summary)))
+  expect_true(is.list(fit$input_provenance))
+  expect_equal(fit$input_provenance$n_observations, nrow(data))
+  expect_equal(length(fit$input_provenance$row_ids), nrow(data))
 })
 
 test_that("workflow assessments provide a compact S3 summary", {
@@ -119,4 +122,30 @@ test_that("reports write a self-contained audit bundle when requested", {
   expect_true(file.exists(report$output_files$summary))
   expect_true(file.exists(report$output_files$comparisons))
   expect_true(file.exists(report$output_files$report))
+  expect_true(file.exists(report$output_files$reproducibility_manifest))
+  expect_true(file.exists(report$output_files$package_versions))
+  expect_true(file.exists(report$output_files$session_info))
+})
+
+test_that("reports export direct-input fingerprints and row identifiers", {
+  input <- data.frame(value = rnorm(25))
+  assessment <- sparq_assess_workflow(
+    data = input,
+    analysis_function = function(x) mean(x$value),
+    output_type = "scalar",
+    n_iterations = 4,
+    min_iterations = 2,
+    instability_bootstrap_B = 10,
+    verbose = FALSE
+  )
+  output_dir <- tempfile("sparq-provenance-")
+  on.exit(unlink(output_dir, recursive = TRUE), add = TRUE)
+  report <- sparq_report(assessment, output_dir = output_dir,
+    include_plots = FALSE, verbose = FALSE)
+
+  expect_true(file.exists(report$output_files$input_row_ids))
+  manifest <- utils::read.delim(report$output_files$reproducibility_manifest,
+    stringsAsFactors = FALSE)
+  expect_true(all(c("package.git_commit", "input.data_fingerprint",
+    "input.row_id_fingerprint", "setting.seed") %in% manifest$key))
 })

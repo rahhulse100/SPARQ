@@ -270,6 +270,7 @@ sparq_assess_procurement <- function(
     assessments = assessments,
     scenario_summary = scenario_summary,
     scenario_loss_audits = lapply(assessments, `[[`, "loss_audits"),
+    input_provenance = assessments[[1]]$input_provenance,
     preflight = preflight_result,
     quality_profile = quality_profile,
     settings = list(
@@ -401,6 +402,18 @@ sparq_report_procurement <- function(assessment, output_dir = NULL,
     output_files$settings <- file.path(output_dir, "procurement_settings.tsv")
     saveRDS(assessment$reference_result, file.path(output_dir, "shared_reference_result.rds"))
     output_files$reference_result <- file.path(output_dir, "shared_reference_result.rds")
+    provenance_assessment <- list(
+      result_id = assessment$result_id,
+      output_type = assessment$output_type,
+      full_result = assessment$reference_result,
+      summary = assessment$scenario_summary,
+      settings = assessment$settings,
+      input_provenance = assessment$input_provenance
+    )
+    output_files <- c(
+      output_files,
+      sparq_write_reproducibility_bundle(provenance_assessment, output_dir)
+    )
   }
 
   for (scenario in names(assessment$assessments)) {
@@ -419,6 +432,14 @@ sparq_report_procurement <- function(assessment, output_dir = NULL,
       result_id = assessment$result_id,
       scenario_summary = assessment$scenario_summary,
       scenario_reports = reports,
+      reproducibility_manifest = sparq_reproducibility_manifest(list(
+        result_id = assessment$result_id,
+        output_type = assessment$output_type,
+        full_result = assessment$reference_result,
+        summary = assessment$scenario_summary,
+        settings = assessment$settings,
+        input_provenance = assessment$input_provenance
+      )),
       output_files = output_files,
       interpretation = assessment$interpretation
     ),

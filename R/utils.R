@@ -104,6 +104,193 @@ sparq_progress <- function(completed, total, verbose = TRUE,
   invisible(NULL)
 }
 
+# Internal provenance helpers. Fingerprints are hashes rather than copies of
+# sensitive input values; row identifiers are retained separately only when an
+# assessment was run directly from spot-level input data.
+
+sparq_input_provenance <- function(data) {
+  if (!is.data.frame(data) || !nrow(data)) {
+    return(NULL)
+  }
+  row_ids <- rownames(data)
+  if (is.null(row_ids) || length(row_ids) != nrow(data) ||
+      anyNA(row_ids) || any(!nzchar(row_ids)) || anyDuplicated(row_ids)) {
+    row_ids <- as.character(seq_len(nrow(data)))
+    row_id_source <- "generated_row_indices"
+  } else {
+    row_id_source <- "data_frame_row_names"
+  }
+  list(
+    n_observations = nrow(data),
+    n_columns = ncol(data),
+    column_names = names(data),
+    column_name_fingerprint = sparq_fingerprint(names(data)),
+    row_id_source = row_id_source,
+    row_ids = as.character(row_ids),
+    row_id_fingerprint = sparq_fingerprint(as.character(row_ids)),
+    data_fingerprint = sparq_fingerprint(data)
+  )
+}
+
+sparq_git_commit <- function() {
+  from_environment <- c(
+    Sys.getenv("SPARQ_GIT_COMMIT", unset = ""),
+    Sys.getenv("GITHUB_SHA", unset = "")
+  )
+  from_environment <- from_environment[nzchar(from_environment)]
+  if (length(from_environment)) {
+    return(from_environment[[1]])
+  }
+
+  description <- tryCatch(
+    suppressWarnings(utils::packageDescription("SPARQ")),
+    error = function(e) NULL
+  )
+  if (is.list(description)) {
+    fields <- c("RemoteSha", "GithubSHA1", "GitHubSHA1", "Commit")
+    values <- unlist(description[intersect(fields, names(description))], use.names = FALSE)
+    values <- values[!is.na(values) & nzchar(values)]
+    if (length(values)) {
+      return(as.character(values[[1]]))
+    }
+  }
+
+  candidates <- c(getwd(), tryCatch(find.package("SPARQ"), error = function(e) ""))
+  candidates <- candidates[nzchar(candidates)]
+  for (candidate in candidates) {
+    path <- normalizePath(candidate, mustWork = FALSE)
+    repeat {
+      if (dir.exists(file.path(path, ".git"))) {
+        commit <- tryCatch(
+          suppressWarnings(system2("git", c("-C", path, "rev-parse", "HEAD"), stdout = TRUE, stderr = FALSE)),
+          error = function(e) character()
+        )
+        if (length(commit) && nzchar(commit[[1]])) {
+          return(commit[[1]])
+        }
+      }
+      parent <- dirname(path)
+      if (identical(parent, path)) {
+        break
+      }
+      path <- parent
+    }
+  }
+  "unavailable"
+}
+
+sparq_loaded_package_versions <- function() {
+  packages <- sort(unique(loadedNamespaces()))
+  versions <- vapply(packages, function(package) {
+    tryCatch(as.character(utils::packageVersion(package)), error = function(e) NA_character_)
+  }, character(1))
+  data.frame(
+    package = packages,
+    version = unname(versions),
+    stringsAsFactors = FALSE
+  )
+}
+
+sparq_reproducibility_manifest <- function(assessment) {
+  settings <- if (is.list(assessment$settings)) assessment$settings else list()
+  setting_rows <- data.frame(
+    key = paste0("setting.", names(settings)),
+    value = vapply(settings, function(value) {
+      if (is.null(value)) return("")
+      if (is.atomic(value)) return(paste(as.character(value), collapse = ";"))
+      paste(utils::capture.output(str(value, give.attr = FALSE)), collapse = " ")
+    }, character(1)),
+    stringsAsFactors = FALSE
+  )
+  input <- assessment$input_provenance
+  input_rows <- if (is.list(input)) {
+    data.frame(
+      key = c(
+        "input.n_observations", "input.n_columns", "input.row_id_source",
+        "input.row_id_fingerprint", "input.column_name_fingerprint",
+        "input.data_fingerprint"
+      ),
+      value = c(
+        input$n_observations, input$n_columns, input$row_id_source,
+        input$row_id_fingerprint, input$column_name_fingerprint,
+        input$data_fingerprint
+      ),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      key = c("input.n_observations", "input.n_columns", "input.row_id_source",
+        "input.row_id_fingerprint", "input.column_name_fingerprint", "input.data_fingerprint"),
+      value = rep("unavailable", 6L), stringsAsFactors = FALSE
+    )
+  }
+  summary_fingerprint <- if (is.data.frame(assessment$summary)) {
+    sparq_fingerprint(assessment$summary)
+  } else {
+    "unavailable"
+  }
+  comparison_fingerprint <- if (is.data.frame(assessment$comparisons)) {
+    sparq_fingerprint(assessment$comparisons)
+  } else {
+    "unavailable"
+  }
+  package_description <- tryCatch(
+    suppressWarnings(utils::packageDescription("SPARQ")),
+    error = function(e) NULL
+  )
+  package_version <- if (!is.list(package_description)) {
+    "source_or_uninstalled"
+  } else {
+    as.character(package_description$Version)
+  }
+  result_id <- if (is.null(assessment$result_id)) "unavailable" else assessment$result_id
+  output_type <- if (is.null(assessment$output_type)) "unavailable" else assessment$output_type
+  core <- data.frame(
+    key = c(
+      "manifest_schema", "created_at_utc", "package.name", "package.version",
+      "package.git_commit", "r.version", "platform", "result_id", "output_type",
+      "reference_result_fingerprint", "summary_fingerprint", "comparisons_fingerprint"
+    ),
+    value = c(
+      "sparq_reproducibility_manifest_v1", format(Sys.time(), tz = "UTC", usetz = TRUE),
+      "SPARQ", package_version, sparq_git_commit(), R.version.string,
+      R.version$platform, as.character(result_id), as.character(output_type),
+      if (is.null(assessment$full_result)) "unavailable" else sparq_fingerprint(assessment$full_result),
+      summary_fingerprint, comparison_fingerprint
+    ),
+    stringsAsFactors = FALSE
+  )
+  out <- rbind(core, input_rows, setting_rows)
+  rownames(out) <- NULL
+  out
+}
+
+sparq_write_reproducibility_bundle <- function(assessment, output_dir) {
+  manifest <- sparq_reproducibility_manifest(assessment)
+  manifest_path <- file.path(output_dir, "reproducibility_manifest.tsv")
+  package_path <- file.path(output_dir, "package_versions.tsv")
+  session_path <- file.path(output_dir, "session_info.txt")
+  utils::write.table(manifest, manifest_path, sep = "\t", row.names = FALSE, quote = FALSE)
+  utils::write.table(sparq_loaded_package_versions(), package_path,
+    sep = "\t", row.names = FALSE, quote = FALSE)
+  writeLines(utils::capture.output(sessionInfo()), session_path)
+  paths <- list(
+    reproducibility_manifest = manifest_path,
+    package_versions = package_path,
+    session_info = session_path
+  )
+  input <- assessment$input_provenance
+  if (is.list(input) && is.character(input$row_ids) && length(input$row_ids)) {
+    input_ids_path <- file.path(output_dir, "input_row_ids.tsv")
+    utils::write.table(
+      data.frame(row_id = input$row_ids, stringsAsFactors = FALSE),
+      input_ids_path, sep = "\t", row.names = FALSE, quote = FALSE
+    )
+    paths$input_row_ids <- input_ids_path
+  }
+  paths
+}
+
 sparq_assessment_status <- function(summary_table) {
   if (!is.data.frame(summary_table) || nrow(summary_table) != 1L) {
     return("unavailable")

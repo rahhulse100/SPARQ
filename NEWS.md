@@ -7,6 +7,9 @@
   quality-weighted support-loss scenarios. The workflow records scenario-level
   support, loss audits, quality summaries, and per-scenario report bundles;
   it explicitly does not perform batch correction or imputation.
+- Reports now write a reproducibility manifest, loaded-package versions,
+  session information, settings, input data/row-ID fingerprints, and direct
+  input row identifiers when an output directory is supplied.
 
 ## 0.2.0 — 2026-10-04
 

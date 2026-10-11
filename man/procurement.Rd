@@ -73,7 +73,8 @@ a quality profile when available, settings, and a non-corrective interpretation.
 \code{sparq_report_procurement} returns in-memory scenario reports and, when
 \code{output_dir} is supplied, writes the shared reference, scenario summary,
 quality profile, settings, full assessment, and one complete report bundle per
-scenario.
+scenario. Every written bundle includes a reproducibility manifest,
+package-version table, session information, and input row-ID/data fingerprints.
 }
 \details{
 Every conclusion is conditional on the declared scenarios. A quality metric is

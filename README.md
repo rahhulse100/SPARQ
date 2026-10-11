@@ -343,8 +343,11 @@ cohort$reliability$cohort_summary
 `sparq_report()` returns an inspectable report object. With an `output_dir`, it
 writes a self-contained audit bundle: the support summary, perturbation table,
 failure ledger, settings, reference result, any retained perturbation results,
-fragility tables, and a PDF overview. SPARQ never creates an output directory
-unless one is explicitly supplied.
+fragility tables, and a PDF overview. It also writes a reproducibility manifest
+with the SPARQ version and Git commit when available, R/platform/package
+versions, timestamp, random settings, input dimensions, input data and row-ID
+fingerprints, and the original row IDs for direct spot-level inputs. SPARQ
+never creates an output directory unless one is explicitly supplied.
 
 ```r
 report <- sparq_report(

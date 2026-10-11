@@ -871,6 +871,7 @@ function (data, analysis_function, comparator, stress_model = "uniform_random",
     if (!is.data.frame(data) || !nrow(data)) {
         stop("data must be a nonempty data.frame.", call. = FALSE)
     }
+    input_provenance <- sparq_input_provenance(data)
     if (!is.null(loss_model) && !inherits(loss_model, "sparq_loss_model")) {
         stop("loss_model must be created by sparq_define_loss_model().",
             call. = FALSE)
@@ -1031,6 +1032,7 @@ function (data, analysis_function, comparator, stress_model = "uniform_random",
             min_iterations = min_iterations,
             instability_bootstrap_B = instability_bootstrap_B,
             loss_model = loss_model),
+        input_provenance = input_provenance,
         failures = comparisons[comparisons$status != "ok", ,
             drop = FALSE])
     if (!is.null(reliability_tolerance)) {

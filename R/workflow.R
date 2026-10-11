@@ -393,6 +393,8 @@ function (assessment, output_dir = NULL, include_plots = TRUE, verbose = TRUE)
             paste(utils::capture.output(str(x, give.attr = FALSE)),
                 collapse = " ")
         }, character(1)), stringsAsFactors = FALSE)
+    reproducibility_manifest <- sparq_reproducibility_manifest(report_assessment)
+    package_versions <- sparq_loaded_package_versions()
     output_type <- if (!is.null(report_assessment$output_type)) {
         as.character(report_assessment$output_type)
     }
@@ -510,6 +512,10 @@ function (assessment, output_dir = NULL, include_plots = TRUE, verbose = TRUE)
         output_files$failures <- write_table(failure_table, "failed_iterations.tsv")
         output_files$settings <- write_table(settings_table,
             "settings.tsv")
+        output_files <- c(
+            output_files,
+            sparq_write_reproducibility_bundle(report_assessment, output_dir)
+        )
         if (is.data.frame(reliability_decision)) {
             output_files$reliability_decision <- write_table(reliability_decision,
                 "reliability_decision.tsv")
@@ -560,6 +566,9 @@ function (assessment, output_dir = NULL, include_plots = TRUE, verbose = TRUE)
         comparisons = comparison_table, failures = failure_table,
         settings = report_assessment$settings, fragility = report_assessment$fragility,
         fragility_tables = fragility_tables, fragility_note = fragility_note,
+        reproducibility_manifest = reproducibility_manifest,
+        package_versions = package_versions,
+        input_provenance = report_assessment$input_provenance,
         loss_audits = loss_audits, reliability_decision = reliability_decision,
         reliability_confidence_sequence = reliability_sequence,
         output_files = output_files)
