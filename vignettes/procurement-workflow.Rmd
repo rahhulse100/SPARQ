@@ -107,6 +107,13 @@ reference result behaved under one declared loss mechanism. A `supported`,
 `not_supported`, or `inconclusive` decision is conditional on the stated
 retention, tolerance, reliability target, and loss model.
 
+| SPARQ finding | Valid interpretation | Not a valid interpretation |
+| --- | --- | --- |
+| High support | Result is robust under the declared loss model. | The result is biologically true. |
+| Low support | Result is sensitive to available spatial support. | SPARQ corrected the result. |
+| Inconclusive | More perturbations, support, or validation may be needed. | The result is false. |
+| Quality-weighted fragility | Quality-linked loss could affect the conclusion. | This proves a batch effect. |
+
 ```{r inspect-assessment}
 assessment$scenario_summary
 plot(assessment)

@@ -374,6 +374,13 @@ If reference and perturbed outputs have already been generated elsewhere, use `s
 
 SPARQ returns a continuous support-quality score, instability summaries, failed-iteration records, and when perturbed outputs are retained—fragility localization. A high score supports consistency under the specified perturbation model; it does not prove a result is biologically correct or unchanged under every possible source of variation.
 
+| SPARQ finding | Valid interpretation | Not a valid interpretation |
+| --- | --- | --- |
+| High support | Result is robust under the declared loss model. | The result is biologically true. |
+| Low support | Result is sensitive to available spatial support. | SPARQ corrected the result. |
+| Inconclusive | More perturbations, support, or validation may be needed. | The result is false. |
+| Quality-weighted fragility | Quality-linked loss could affect the conclusion. | This proves a batch effect. |
+
 ## Development status
 
 SPARQ is an installable R source package. The current development focus is broader workflow adapters, adaptive stopping validation for every output type, documentation, and external biological validation.
