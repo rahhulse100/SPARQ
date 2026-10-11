@@ -13,7 +13,11 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1.0)
 Imports: stats, parallel, utils, tools, data.table
-Suggests: testthat
+Suggests:
+    testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Collate: 'utils.R' 'usability.R' 'generic.R' 'ranked_feature.R' 'support.R' 'api.R'
         'legacy_exports.R' 'methods_impl.R' 'reliability_advanced.R'
         'spatial_loss.R' 'workflow.R' 'adaptive.R' 'script_adapter.R'

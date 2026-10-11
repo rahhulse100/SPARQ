@@ -47,6 +47,13 @@ remotes::install_github("rahhulse100/SPARQ1")
 library(SPARQ)
 ```
 
+For a fully runnable five-minute example using a simulated spatial section,
+open the procurement-aware tutorial after installation:
+
+```r
+vignette("procurement-workflow", package = "SPARQ")
+```
+
 ## Standard workflow
 
 Give SPARQ a spot-level data frame and a function that reruns the analysis after rows have been removed. For a scalar result:

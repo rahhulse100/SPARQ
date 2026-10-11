@@ -1,0 +1,138 @@
+---
+title: "Procurement-aware reliability assessment"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Procurement-aware reliability assessment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+set.seed(20261011)
+```
+
+SPARQ evaluates whether a specified analysis result remains defensible when
+plausible spot loss is introduced. This short tutorial uses a simulated spatial
+section, so it requires no laboratory-owned data. The simulation is only a
+workflow demonstration; it is not biological validation.
+
+SPARQ does not batch-correct data, impute missing tissue, or recover a result
+that is not supported by the available specimen. It quantifies sensitivity to
+the loss scenarios that the analyst declares.
+
+## 1. Create a small spatial section
+
+The data frame has one row per spot, coordinates, a synthetic tumour-associated
+score, and a spot-level quality metric. In a real analysis, these would be your
+spot metadata and the inputs needed by the downstream analysis function.
+
+```{r simulate-section}
+library(SPARQ)
+
+grid <- expand.grid(
+  x = seq_len(16),
+  y = seq_len(16),
+  KEEP.OUT.ATTRS = FALSE,
+  stringsAsFactors = FALSE
+)
+
+distance_from_centre <- sqrt((grid$x - 8.5)^2 + (grid$y - 8.5)^2)
+tumour_signal <- 2.5 - 0.55 * distance_from_centre + rnorm(nrow(grid), sd = 0.55)
+
+spots <- data.frame(
+  spot_id = sprintf("spot_%03d", seq_len(nrow(grid))),
+  x = grid$x,
+  y = grid$y,
+  tumour_signal = tumour_signal,
+  library_size = pmax(
+    100,
+    round(1800 + 550 * tumour_signal + rnorm(nrow(grid), sd = 350))
+  ),
+  stringsAsFactors = FALSE
+)
+
+head(spots)
+```
+
+## 2. State the downstream result
+
+Here the result is a scalar tumour-associated score. Replace this function with
+your own analysis rerun: for example, a domain workflow returning named spot
+labels, a ranked marker workflow returning an ordered feature vector, or a
+network workflow returning canonical edge IDs.
+
+```{r define-analysis}
+estimate_tumour_signal <- function(data) {
+  mean(data$tumour_signal)
+}
+
+estimate_tumour_signal(spots)
+```
+
+## 3. Assess declared procurement scenarios
+
+The reference analysis runs once. SPARQ then reruns the stated result after
+four loss mechanisms: random spot loss, a contiguous local hole, edge-weighted
+loss, and quality-weighted loss. The small iteration count keeps this vignette
+fast; use a larger preset or an explicitly larger iteration count for an actual
+study.
+
+```{r run-assessment}
+assessment <- sparq_assess_procurement(
+  data = spots,
+  analysis_function = estimate_tumour_signal,
+  output_type = "scalar",
+  x_col = "x",
+  y_col = "y",
+  quality_col = "library_size",
+  retention = 0.75,
+  n_iterations = 12,
+  min_iterations = 6,
+  instability_bootstrap_B = 100,
+  reliability_tolerance = 0.15,
+  required_reliability = 0.80,
+  result_id = "simulated_section",
+  seed = 20261011,
+  verbose = FALSE
+)
+
+summary(assessment)
+```
+
+## 4. Inspect the result
+
+The scenario table is the decision-facing output. Each row reports how the same
+reference result behaved under one declared loss mechanism. A `supported`,
+`not_supported`, or `inconclusive` decision is conditional on the stated
+retention, tolerance, reliability target, and loss model.
+
+```{r inspect-assessment}
+assessment$scenario_summary
+plot(assessment)
+```
+
+## 5. Export an auditable report
+
+`sparq_report_procurement()` writes the scenario summaries, retained-spot/loss
+audits, comparisons, reproducibility manifests, package versions, and session
+information. This example writes to a temporary directory; replace
+`report_dir` with a durable project directory for a study.
+
+```{r write-report}
+report_dir <- tempfile("sparq-procurement-demo-")
+report <- sparq_report_procurement(
+  assessment,
+  output_dir = report_dir,
+  include_plots = FALSE
+)
+
+report$output_files
+list.files(report_dir, recursive = TRUE)
+```
+
+The same workflow applies to a real specimen: substitute a genuine spot-level
+data frame and the analysis function that produces the result you need to
+assess. The conclusion remains a reliability statement about that defined
+result under the declared support-loss scenarios, not a correction of tissue
+quality or an assertion of biological truth.

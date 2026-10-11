@@ -2,6 +2,9 @@
 
 ## Development
 
+- Added a fully runnable procurement-aware vignette using a simulated spatial
+  section, so the complete workflow can be evaluated without access to a
+  laboratory-owned spatial dataset.
 - Added `sparq_assess_procurement()` and `sparq_report_procurement()` for one
   shared-reference assessment across explicit uniform, local-hole, edge, and
   quality-weighted support-loss scenarios. The workflow records scenario-level
