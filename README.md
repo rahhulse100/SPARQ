@@ -1,13 +1,17 @@
-<img src="docs/assets/sparq-hero.png" align="right" width="150" alt="SPARQ spatial-transcriptomics perturbation illustration">
-
-# SPARQ
-
-**Spatial Perturbation Analysis for Reliability Quantification**
+<table>
+  <tr>
+    <td width="150" valign="middle">
+      <img src="docs/assets/sparq-hero.png" width="130" alt="SPARQ spatial-transcriptomics perturbation illustration">
+    </td>
+    <td valign="middle">
+      <h1>SPARQ</h1>
+      <strong>Spatial Perturbation Analysis for Reliability Quantification</strong>
+    </td>
+  </tr>
+</table>
 
 [![R-CMD-check](https://github.com/rahhulse100/SPARQ1/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/rahhulse100/SPARQ1/actions/workflows/R-CMD-check.yaml)
 [![R version](https://img.shields.io/badge/R-%3E%3D%204.1-276DC3)](https://www.r-project.org/)
-
-<br clear="right">
 
 SPARQ asks whether an analysis result remains consistent when plausible spot loss is introduced into a spatial-transcriptomic section. It does not denoise the data, replace an analysis method, or establish biological truth. It quantifies how sensitive a specified result is to a defined perturbation model.
 
