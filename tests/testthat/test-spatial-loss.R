@@ -78,3 +78,56 @@ test_that("reports export loss and reliability audit tables", {
   expect_true(file.exists(report$output_files$spot_loss_audit))
   expect_true(file.exists(report$output_files$reliability_decision))
 })
+
+test_that("procurement workflow reuses one reference result across declared scenarios", {
+  set.seed(44)
+  spots <- data.frame(
+    value = rnorm(50),
+    x = runif(50),
+    y = runif(50),
+    library_size = rexp(50, rate = 1 / 1000)
+  )
+  fit <- sparq_assess_procurement(
+    data = spots,
+    analysis_function = function(x) mean(x$value),
+    output_type = "scalar",
+    x_col = "x",
+    y_col = "y",
+    quality_col = "library_size",
+    scenarios = c("uniform_random", "contiguous_hole", "edge_weighted", "quality_weighted"),
+    n_iterations = 6,
+    min_iterations = 3,
+    instability_bootstrap_B = 10,
+    preset = "quick",
+    preflight = FALSE,
+    verbose = FALSE,
+    seed = 123
+  )
+
+  expect_s3_class(fit, "sparq_procurement_assessment")
+  expect_equal(fit$scenario_summary$scenario, c(
+    "uniform_random", "contiguous_hole", "edge_weighted", "quality_weighted"
+  ))
+  expect_true(all(vapply(fit$assessments, function(x) {
+    identical(x$full_result, fit$reference_result)
+  }, logical(1))))
+  expect_true(all(vapply(fit$scenario_loss_audits[c(
+    "contiguous_hole", "edge_weighted", "quality_weighted"
+  )], length, integer(1)) == 6L))
+  expect_match(fit$interpretation, "does not correct batch effects")
+})
+
+test_that("procurement workflow validates declared scenario requirements", {
+  spots <- data.frame(value = rnorm(20), quality = seq_len(20))
+  expect_error(
+    sparq_assess_procurement(
+      data = spots,
+      analysis_function = function(x) mean(x$value),
+      output_type = "scalar",
+      scenarios = "contiguous_hole",
+      preflight = FALSE,
+      verbose = FALSE
+    ),
+    "unavailable input columns"
+  )
+})

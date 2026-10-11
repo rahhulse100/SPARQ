@@ -241,6 +241,44 @@ assessment <- sparq_assess_workflow(
 farther from the coordinate-wise tissue center. These are specified stress
 distributions, not assertions that one mechanism is the true missingness model.
 
+## Procurement-aware sensitivity analysis
+
+When a specimen cannot be recollected, the relevant question is not whether
+SPARQ can reconstruct tissue that was never captured. It cannot. Instead,
+`sparq_assess_procurement()` runs one shared reference analysis and evaluates
+the same conclusion under every declared, data-supported loss scenario:
+uniform loss, a contiguous missing region, edge-biased loss, and loss weighted
+by a user-supplied spot-level quality metric. The output names the scenario
+under which a conclusion becomes fragile and preserves every loss audit.
+
+```r
+spot_data$library_size <- rpois(nrow(spot_data), lambda = 1500) + 1L
+
+procurement <- sparq_assess_procurement(
+  data = spot_data,
+  analysis_function = function(data) mean(data$signature_score),
+  output_type = "scalar",
+  x_col = "x",
+  y_col = "y",
+  quality_col = "library_size",
+  reliability_tolerance = 0.10,
+  required_reliability = 0.90
+)
+
+summary(procurement)
+plot(procurement)
+
+sparq_report_procurement(
+  procurement,
+  output_dir = "sparq_procurement_report"
+)
+```
+
+This is a sensitivity analysis, not batch correction, denoising, imputation,
+or a claim that any single loss model is the true procurement process. Batch
+correction, when appropriate, is an upstream analysis choice; SPARQ can assess
+the stability of its downstream result.
+
 ## Reliability frontiers
 
 One retention value answers whether a conclusion survives one sampling regime.

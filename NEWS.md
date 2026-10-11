@@ -1,5 +1,13 @@
 # SPARQ news
 
+## Development
+
+- Added `sparq_assess_procurement()` and `sparq_report_procurement()` for one
+  shared-reference assessment across explicit uniform, local-hole, edge, and
+  quality-weighted support-loss scenarios. The workflow records scenario-level
+  support, loss audits, quality summaries, and per-scenario report bundles;
+  it explicitly does not perform batch correction or imputation.
+
 ## 0.2.0 — 2026-10-04
 
 - Added workflow, script, spatial-object, and adaptive assessment interfaces.

@@ -10,7 +10,8 @@ function (data, analysis_function, output_type = c("scalar",
         "stop"), verbose = NULL, progress_every = NULL, preset = "standard",
     min_iterations = NULL, instability_bootstrap_B = NULL,
     reliability_tolerance = NULL, required_reliability = 0.9,
-    reliability_confidence = 0.95, loss_model = NULL, ...)
+    reliability_confidence = 0.95, loss_model = NULL,
+    full_result = NULL, keep_perturbed_results = FALSE, ...)
 {
     if (!is.data.frame(data) || !nrow(data)) {
         stop("data must be a nonempty data.frame.", call. = FALSE)
@@ -45,6 +46,8 @@ function (data, analysis_function, output_type = c("scalar",
         required_reliability = required_reliability,
         reliability_confidence = reliability_confidence,
         loss_model = loss_model,
+        full_result = full_result,
+        keep_perturbed_results = keep_perturbed_results,
         ...)
     fit$output_type <- output_type
     fit$workflow <- list(output_type = output_type, stress_model = stress_model,

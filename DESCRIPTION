@@ -17,4 +17,5 @@ Suggests: testthat
 Collate: 'utils.R' 'usability.R' 'generic.R' 'ranked_feature.R' 'support.R' 'api.R'
         'legacy_exports.R' 'methods_impl.R' 'reliability_advanced.R'
         'spatial_loss.R' 'workflow.R' 'adaptive.R' 'script_adapter.R'
-        'spatial_adapter.R' 'frontier.R' 'cohort_reliability.R' 'ablation.R'
+        'spatial_adapter.R' 'frontier.R' 'cohort_reliability.R' 'procurement.R'
+        'ablation.R'
