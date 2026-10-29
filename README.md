@@ -345,6 +345,44 @@ cohort$reliability$section_reliability
 cohort$reliability$cohort_summary
 ```
 
+## Multiple analyses on the same support loss
+
+When a researcher wants to assess several conclusions from one section, use
+`sparq_assess_many()`. It runs each analysis on the identical retained-spot
+set at each iteration, so differences between analyses cannot be attributed to
+different random spot removals. Every analysis retains its own output-specific
+comparator and support summary.
+
+```r
+many <- sparq_assess_many(
+  data = spot_data,
+  analyses = list(
+    mean_signature = list(
+      analysis_function = function(x) mean(x$signature_score),
+      output_type = "scalar"
+    ),
+    ranked_signature = list(
+      analysis_function = function(x) names(sort(x$signature_score, decreasing = TRUE)),
+      output_type = "ranked", top_k = 25
+    )
+  ),
+  retention = 0.75,
+  n_iterations = 100,
+  x_col = "x",
+  y_col = "y",
+  seed = 1
+)
+
+summary(many)
+sparq_report_many(many, "sparq_multi_analysis_report")
+```
+
+For computationally expensive analyses, establish agreement with a fixed
+protocol on a prespecified validation subset, then use
+`sparq_assess_adaptive()` with a fixed minimum, maximum, confidence level, and
+decision rule. Adaptive stopping is a compute-saving procedure; it does not
+alter the declared retention or support-loss mechanism.
+
 ## Reports and audit bundles
 
 `sparq_report()` returns an inspectable report object. With an `output_dir`, it

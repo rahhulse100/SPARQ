@@ -2,6 +2,14 @@
 
 ## Development
 
+- Added `sparq_assess_many()` and `sparq_report_many()` for paired evaluation
+  of several user-defined analyses on one shared reference input and identical
+  retained-spot sets. The report bundle writes a cross-analysis summary,
+  failure ledger, manifest, and one complete audit directory per analysis.
+- Added package tests for shared retained-spot sets, multi-analysis audit
+  bundles, and agreement of adaptive and fixed assessments in a deterministic
+  full-retention case.
+
 - Added a fully runnable procurement-aware vignette using a simulated spatial
   section, so the complete workflow can be evaluated without access to a
   laboratory-owned spatial dataset.
