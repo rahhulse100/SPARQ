@@ -1,6 +1,6 @@
 Package: SPARQ
 Title: Spatial Perturbation Analysis for Reliability Quantification
-Version: 0.2.0
+Version: 0.1.0
 Authors@R: person("Rahhul", "Elangovan", email =
         "rahhul.s.elangovan-1@ou.edu", role = c("aut", "cre"))
 Description: Quantifies the reliability of spatial-transcriptomic analysis
