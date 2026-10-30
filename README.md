@@ -130,6 +130,56 @@ assessment <- sparq_assess_workflow(
 assessment$reliability_decision
 ```
 
+## Declare the result type before assessing it
+
+SPARQ compares each result in its native output space.  Use an analysis
+specification to make both the comparator and the preservation rule explicit.
+SPARQ does not assign a biological tolerance silently.
+
+```r
+domain_analysis <- sparq_partition_analysis(
+  analysis_function = run_domains,
+  min_ari = 0.60
+)
+
+gene_analysis <- sparq_ranked_analysis(
+  analysis_function = run_gene_ranking,
+  top_k = 100,
+  min_jaccard = 0.60
+)
+
+neighborhood_analysis <- sparq_graph_analysis(
+  analysis_function = run_neighborhood_graph,
+  min_edge_jaccard = 0.60
+)
+
+pathway_analysis <- sparq_scalar_analysis(
+  analysis_function = run_pathway_score,
+  max_normalized_change = 0.20,
+  reference_scale = 1
+)
+```
+
+The four built-in result classes are:
+
+| Result class | Examples | Comparator | Preservation rule |
+| --- | --- | --- | --- |
+| `partition` | domains, clusters, cell labels | adjusted Rand index | explicit minimum ARI |
+| `ranked` | genes, pathways, ligand--receptor pairs | top-*k* Jaccard, replacement, rank correlation | explicit minimum top-*k* Jaccard |
+| `graph` | neighborhood or interaction edges | edge Jaccard | explicit minimum edge Jaccard |
+| `scalar` | activity, abundance, effect size | normalized absolute change | explicit maximum normalized change |
+
+For a result outside these classes, use `sparq_custom_analysis()` and supply a
+comparator that returns a non-negative `instability` column.
+
+The assessment functions remain separate by design.  `sparq_assess_many()` is
+for several analyses on the same retained-spot sets;
+`sparq_assess_procurement()` is for one analysis across declared support-loss
+models; and `sparq_assess_adaptive()` is for one expensive analysis with
+sequential stopping.  A study-level script can call them separately and retain
+per-analysis failure logs rather than concealing one failed method inside a
+large combined call.
+
 SPARQ prints a compact execution log by default: the reference analysis,
 perturbation progress, and the final support result. Printing the assessment
 itself gives the same decision-relevant summary without requiring users to

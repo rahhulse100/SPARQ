@@ -35,6 +35,7 @@ sparq_assess_many <- function(
   retention <- resolved$retention; n_iterations <- resolved$n_iterations
   verbose <- resolved$verbose
   comparator_for <- function(spec) {
+    if (is.function(spec$comparator)) return(spec$comparator)
     type <- match.arg(spec$output_type, c("scalar", "ranked", "partition", "graph"))
     if (type == "scalar") return(sparq_compare_scalar)
     if (type == "partition") return(sparq_compare_partition)
@@ -46,9 +47,36 @@ sparq_assess_many <- function(
     if (!is.list(spec) || !is.function(spec$analysis_function) || is.null(spec$output_type)) {
       stop("Each analysis must provide analysis_function and output_type.", call. = FALSE)
     }
+    if (!is.character(spec$output_type) || length(spec$output_type) != 1L ||
+        is.na(spec$output_type) || !spec$output_type %in%
+          c("scalar", "ranked", "partition", "graph", "custom")) {
+      stop("Each analysis output_type must be scalar, ranked, partition, graph, or custom.",
+        call. = FALSE)
+    }
+    if (identical(spec$output_type, "custom") && !is.function(spec$comparator)) {
+      stop("A custom analysis must provide a comparator function.", call. = FALSE)
+    }
     spec$comparator <- comparator_for(spec)
     spec$reference_scale <- if (is.null(spec$reference_scale)) 1 else spec$reference_scale
     sparq_check_number(spec$reference_scale, "reference_scale")
+    if (!is.null(spec$decision_rule)) {
+      rule <- spec$decision_rule
+      required <- c("name", "reliability_tolerance", "required_reliability",
+        "reliability_confidence", "reference_scale")
+      if (!is.list(rule) || !all(required %in% names(rule))) {
+        stop("analysis decision_rule is malformed.", call. = FALSE)
+      }
+      sparq_check_number(rule$reliability_tolerance,
+        "decision_rule reliability_tolerance", 0)
+      sparq_check_number(rule$required_reliability,
+        "decision_rule required_reliability", .Machine$double.eps,
+        1 - .Machine$double.eps)
+      sparq_check_number(rule$reliability_confidence,
+        "decision_rule reliability_confidence", .Machine$double.eps,
+        1 - .Machine$double.eps)
+      sparq_check_number(rule$reference_scale,
+        "decision_rule reference_scale")
+    }
     spec
   })
   references <- lapply(seq_along(specs), function(i) {
@@ -85,13 +113,30 @@ sparq_assess_many <- function(
     summary <- sparq_support_from_comparisons(tab, n_iterations = n_iterations,
       reference_scale = spec$reference_scale, seed = sparq_seed(seed, match(name, names(specs)), 702L), ...)
     summary$result_id <- name
+    reliability_decision <- NULL
+    if (!is.null(spec$decision_rule)) {
+      rule <- spec$decision_rule
+      reliability_decision <- sparq_reliability_decision(
+        tab,
+        tolerance = rule$reliability_tolerance,
+        required_reliability = rule$required_reliability,
+        confidence = rule$reliability_confidence,
+        reference_scale = rule$reference_scale
+      )
+      summary$decision_rule <- rule$name
+      for (field in names(reliability_decision)) {
+        summary[[paste0("reliability_", field)]] <- reliability_decision[[field]][1]
+      }
+    }
     structure(list(result_id = name, output_type = spec$output_type,
       full_result = references[[name]],
       perturbed_results = if (keep_perturbed_results) outputs[[name]] else NULL,
       comparisons = tab, summary = summary, loss_audits = audits,
       failures = tab[tab$status != "ok", , drop = FALSE],
       settings = list(stress_model = stress_model, retention = retention, n_iterations = n_iterations,
-        seed = seed, shared_perturbations = TRUE, loss_model = loss_model),
+        seed = seed, shared_perturbations = TRUE, loss_model = loss_model,
+        decision_rule = spec$decision_rule),
+      reliability_decision = reliability_decision,
       input_provenance = sparq_input_provenance(data)), class = "sparq_assessment")
   })
   names(assessments) <- names(specs)
