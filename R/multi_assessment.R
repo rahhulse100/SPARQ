@@ -90,7 +90,10 @@ sparq_assess_many <- function(
   for (iteration in seq_len(n_iterations)) {
     perturbed <- sparq_stress_model(data, retention = retention, model = stress_model,
       x_col = x_col, y_col = y_col, iteration = iteration, seed = seed, loss_model = loss_model)
-    audits[[iteration]] <- attr(perturbed, "sparq_loss_audit")
+    # `x[[i]] <- NULL` removes an element from an R list.  Preserve a
+    # NULL audit for legacy stress models so one entry remains aligned to
+    # every requested perturbation.
+    audits[iteration] <- list(attr(perturbed, "sparq_loss_audit"))
     for (name in names(specs)) {
       spec <- specs[[name]]
       outcome <- tryCatch({

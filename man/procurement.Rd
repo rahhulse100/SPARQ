@@ -1,5 +1,6 @@
 \name{sparq_assess_procurement}
 \alias{sparq_assess_procurement}
+\alias{sparq_assess_procurement_adaptive}
 \alias{sparq_report_procurement}
 \alias{print.sparq_procurement_assessment}
 \alias{summary.sparq_procurement_assessment}
@@ -21,8 +22,21 @@ sparq_assess_procurement(
   retention = NULL, n_iterations = NULL, preset = "standard",
   quality_direction = c("higher_quality_retained", "lower_quality_retained"),
   quality_strength = 1, edge_strength = 1, top_k = 100,
-  result_id = "result", reference_scale = 1, seed = 1,
+  result_id = "result", reference_scale = 1, seed = 1, full_result = NULL,
   preflight = TRUE, verbose = NULL, ...
+)
+
+sparq_assess_procurement_adaptive(
+  data, analysis_function,
+  output_type = c("scalar", "ranked", "partition", "graph"),
+  x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
+  retention = 0.75,
+  quality_direction = c("higher_quality_retained", "lower_quality_retained"),
+  quality_strength = 1, edge_strength = 1, top_k = 100,
+  result_id = "result", reference_scale = 1, seed = 1, full_result = NULL,
+  reliability_tolerance, required_reliability = 0.9,
+  reliability_confidence = 0.95, batch_size = 10,
+  min_iterations = 50, max_iterations = 100, verbose = NULL, ...
 )
 
 sparq_report_procurement(assessment, output_dir = NULL,
@@ -53,6 +67,9 @@ sparq_report_procurement(assessment, output_dir = NULL,
   \item{reference_scale}{Comparator reference scale.}
   \item{seed}{Master random seed. Scenario-specific seeds are deterministically
   derived from this seed.}
+\item{full_result}{Optional precomputed baseline result. When supplied, it is
+used as the immutable reference for every adaptive scenario rather than
+rerunning the baseline analysis.}
   \item{preflight}{Whether to run one preflight reference analysis and small
   spot-removal rerun before the scenario assessments. The preflight reference
   is reused by all scenarios.}

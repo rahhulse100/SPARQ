@@ -58,8 +58,8 @@ test_that("adaptive and fixed retention-one assessments agree on support", {
   data <- data.frame(value = seq_len(30))
   fixed <- sparq_assess_workflow(
     data = data, analysis_function = function(x) mean(x$value),
-    output_type = "scalar", retention = 1, n_iterations = 8,
-    min_iterations = 4, instability_bootstrap_B = 20,
+    output_type = "scalar", retention = 1, n_iterations = 40,
+    min_iterations = 20, instability_bootstrap_B = 20,
     reliability_tolerance = 0.1, required_reliability = 0.9,
     seed = 22, verbose = FALSE
   )
@@ -67,11 +67,11 @@ test_that("adaptive and fixed retention-one assessments agree on support", {
     data = data, analysis_function = function(x) mean(x$value),
     comparator = sparq_compare_scalar, retention = 1,
     reliability_tolerance = 0.1, required_reliability = 0.9,
-    batch_size = 2, min_iterations = 4, max_iterations = 8,
+    batch_size = 10, min_iterations = 20, max_iterations = 100,
     support_bootstrap_B = 20, instability_bootstrap_B = 20,
     seed = 22, verbose = FALSE
   )
   expect_equal(fixed$reliability_decision$decision, "supported")
   expect_equal(adaptive$adaptive_decision$decision, "supported")
-  expect_lte(adaptive$adaptive_decision$n_attempted, 8)
+  expect_lte(adaptive$adaptive_decision$n_attempted, 100)
 })

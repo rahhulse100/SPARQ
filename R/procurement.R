@@ -66,7 +66,7 @@ sparq_assess_procurement <- function(
     retention = NULL, n_iterations = NULL, preset = "standard",
     quality_direction = c("higher_quality_retained", "lower_quality_retained"),
     quality_strength = 1, edge_strength = 1, top_k = 100,
-    result_id = "result", reference_scale = 1, seed = 1,
+    result_id = "result", reference_scale = 1, seed = 1, full_result = NULL,
     preflight = TRUE, verbose = NULL, ...) {
 
   output_type <- match.arg(output_type)
@@ -155,7 +155,9 @@ sparq_assess_procurement <- function(
     )
   }
 
-  reference_result <- if (!is.null(preflight_result)) {
+  reference_result <- if (!is.null(full_result)) {
+    full_result
+  } else if (!is.null(preflight_result)) {
     preflight_result$reference_result
   } else {
     sparq_with_seed(
@@ -291,6 +293,168 @@ sparq_assess_procurement <- function(
   )
   class(out) <- "sparq_procurement_assessment"
   sparq_inform("Procurement assessment completed; no correction was applied.", verbose)
+  out
+}
+
+#' Adaptively assess one result across declared support-loss scenarios
+#'
+#' Runs a single reference analysis, then evaluates each declared loss model
+#' independently with [sparq_assess_adaptive()].  Each scenario has its own
+#' stopping decision, confidence sequence, failures, and loss audit.  This is
+#' deliberately separate from [sparq_assess_adaptive()], which remains the
+#' one-analysis, one-loss-model interface.
+#'
+#' @param data,analysis_function,x_col,y_col,quality_col,scenarios,
+#'   quality_direction,quality_strength,edge_strength,result_id,
+#'   reference_scale,seed,verbose See [sparq_assess_procurement()].
+#' @param output_type One of `"scalar"`, `"ranked"`, `"partition"`, or
+#'   `"graph"`.
+#' @param top_k Ranking depth for a ranked result.
+#' @param retention Fraction of spots retained in every scenario.
+#' @param reliability_tolerance Maximum normalized comparator distance that is
+#'   considered preserved. This must be declared by the caller.
+#' @param required_reliability Required fraction of preserved perturbations.
+#' @param reliability_confidence Confidence level used for each scenario's
+#'   confidence sequence.
+#' @param batch_size,min_iterations,max_iterations Adaptive stopping controls.
+#' @param ... Further arguments passed to [sparq_assess_adaptive()].
+#'
+#' @return A `sparq_procurement_adaptive_assessment` with one independent
+#'   adaptive assessment per support-loss scenario.
+#' @export
+sparq_assess_procurement_adaptive <- function(
+    data, analysis_function,
+    output_type = c("scalar", "ranked", "partition", "graph"),
+    x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
+    retention = 0.75, quality_direction = c("higher_quality_retained", "lower_quality_retained"),
+    quality_strength = 1, edge_strength = 1, top_k = 100,
+    result_id = "result", reference_scale = 1, seed = 1, full_result = NULL,
+    reliability_tolerance, required_reliability = 0.9,
+    reliability_confidence = 0.95, batch_size = 10,
+    min_iterations = 50, max_iterations = 100, verbose = NULL, ...) {
+
+  output_type <- match.arg(output_type)
+  quality_direction <- match.arg(quality_direction)
+  if (!is.data.frame(data) || !nrow(data)) {
+    stop("data must be a nonempty data.frame.", call. = FALSE)
+  }
+  if (!is.function(analysis_function)) {
+    stop("analysis_function must be a function.", call. = FALSE)
+  }
+  if (xor(is.null(x_col), is.null(y_col))) {
+    stop("Supply both x_col and y_col, or neither.", call. = FALSE)
+  }
+  has_coordinates <- !is.null(x_col)
+  if (has_coordinates && (!is.character(x_col) || !is.character(y_col) ||
+      length(x_col) != 1L || length(y_col) != 1L ||
+      !all(c(x_col, y_col) %in% names(data)) ||
+      !is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]]) ||
+      any(!is.finite(data[[x_col]])) || any(!is.finite(data[[y_col]])))) {
+    stop("x_col and y_col must name finite numeric columns in data.", call. = FALSE)
+  }
+  has_quality <- !is.null(quality_col)
+  if (has_quality && (!is.character(quality_col) || length(quality_col) != 1L ||
+      !quality_col %in% names(data) || !is.numeric(data[[quality_col]]) ||
+      any(!is.finite(data[[quality_col]])))) {
+    stop("quality_col must name one finite numeric column in data.", call. = FALSE)
+  }
+  sparq_check_number(retention, "retention", .Machine$double.eps, 1)
+  sparq_check_number(reliability_tolerance, "reliability_tolerance", 0)
+  sparq_check_number(required_reliability, "required_reliability",
+    .Machine$double.eps, 1 - .Machine$double.eps)
+  sparq_check_number(reliability_confidence, "reliability_confidence",
+    .Machine$double.eps, 1 - .Machine$double.eps)
+  sparq_check_number(batch_size, "batch_size", 1, integer = TRUE)
+  sparq_check_number(min_iterations, "min_iterations", 2, integer = TRUE)
+  sparq_check_number(max_iterations, "max_iterations", min_iterations, integer = TRUE)
+  sparq_check_number(seed, "seed", 0, integer = TRUE)
+  sparq_check_number(reference_scale, "reference_scale")
+  if (output_type == "ranked") sparq_check_number(top_k, "top_k", 1, integer = TRUE)
+
+  supported_scenarios <- "uniform_random"
+  if (has_coordinates) supported_scenarios <- c(supported_scenarios, "contiguous_hole", "edge_weighted")
+  if (has_quality) supported_scenarios <- c(supported_scenarios, "quality_weighted")
+  allowed_scenarios <- c("uniform_random", "contiguous_hole", "edge_weighted", "quality_weighted")
+  if (is.null(scenarios)) scenarios <- supported_scenarios
+  if (!is.character(scenarios) || !length(scenarios) || anyNA(scenarios) ||
+      anyDuplicated(scenarios) || any(!scenarios %in% allowed_scenarios)) {
+    stop("scenarios must be unique allowed scenario names.", call. = FALSE)
+  }
+  unavailable <- setdiff(scenarios, supported_scenarios)
+  if (length(unavailable)) {
+    stop("Requested scenario(s) require unavailable input columns: ",
+      paste(unavailable, collapse = ", "), ".", call. = FALSE)
+  }
+
+  comparator <- switch(output_type,
+    scalar = sparq_compare_scalar,
+    ranked = function(full_result, perturbed_result) {
+      sparq_compare_ranked(full_result, perturbed_result, k = top_k)
+    },
+    partition = sparq_compare_partition,
+    graph = sparq_compare_graph
+  )
+  reference_result <- if (is.null(full_result)) {
+    sparq_with_seed(sparq_seed(seed, 0L, 501L), analysis_function(data))
+  } else {
+    full_result
+  }
+  make_loss_model <- function(scenario) {
+    switch(scenario,
+      uniform_random = NULL,
+      contiguous_hole = sparq_define_loss_model(type = "contiguous_hole"),
+      edge_weighted = sparq_define_loss_model(type = "edge_weighted", edge_strength = edge_strength),
+      quality_weighted = sparq_define_loss_model(
+        type = "quality_weighted", quality_col = quality_col,
+        quality_direction = quality_direction, quality_strength = quality_strength
+      )
+    )
+  }
+
+  assessments <- setNames(vector("list", length(scenarios)), scenarios)
+  rows <- vector("list", length(scenarios))
+  for (index in seq_along(scenarios)) {
+    scenario <- scenarios[[index]]
+    model <- make_loss_model(scenario)
+    assessments[[scenario]] <- sparq_assess_adaptive(
+      data = data, analysis_function = analysis_function, comparator = comparator,
+      stress_model = "uniform_random", retention = retention,
+      reliability_tolerance = reliability_tolerance,
+      required_reliability = required_reliability,
+      reliability_confidence = reliability_confidence,
+      batch_size = batch_size, min_iterations = min_iterations,
+      max_iterations = max_iterations, result_id = paste0(result_id, "__", scenario),
+      x_col = x_col, y_col = y_col, reference_scale = reference_scale,
+      seed = sparq_seed(seed, index, 502L), full_result = reference_result,
+      loss_model = model, ...
+    )
+    fit <- assessments[[scenario]]
+    rows[[index]] <- cbind(
+      data.frame(scenario = scenario,
+        loss_model = if (is.null(model)) "uniform_random" else model$type,
+        stringsAsFactors = FALSE),
+      fit$summary,
+      fit$adaptive_decision
+    )
+  }
+  scenario_summary <- sparq_bind_rows(rows)
+  out <- list(
+    result_id = result_id, output_type = output_type,
+    reference_result = reference_result, assessments = assessments,
+    scenario_summary = scenario_summary,
+    scenario_loss_audits = lapply(assessments, `[[`, "loss_audits"),
+    input_provenance = sparq_input_provenance(data),
+    settings = list(scenarios = scenarios, retention = retention, top_k = top_k,
+      x_col = x_col, y_col = y_col, quality_col = quality_col,
+      quality_direction = quality_direction, quality_strength = quality_strength,
+      edge_strength = edge_strength, reliability_tolerance = reliability_tolerance,
+      required_reliability = required_reliability,
+      reliability_confidence = reliability_confidence, batch_size = batch_size,
+      min_iterations = min_iterations, max_iterations = max_iterations,
+      reference_scale = reference_scale, seed = seed),
+    interpretation = "Each declared support-loss scenario was evaluated independently with adaptive stopping. SPARQ assesses sensitivity; it does not reconstruct unavailable tissue or correct the original analysis."
+  )
+  class(out) <- c("sparq_procurement_adaptive_assessment", "sparq_procurement_assessment")
   out
 }
 
