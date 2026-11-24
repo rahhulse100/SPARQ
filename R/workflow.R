@@ -11,13 +11,16 @@ function (data, analysis_function, output_type = c("scalar",
     min_iterations = NULL, instability_bootstrap_B = NULL,
     reliability_tolerance = NULL, required_reliability = 0.9,
     reliability_confidence = 0.95, loss_model = NULL,
-    full_result = NULL, keep_perturbed_results = FALSE, ...)
+    full_result = NULL, keep_perturbed_results = FALSE, comparator = NULL, ...)
 {
     if (!is.data.frame(data) || !nrow(data)) {
         stop("data must be a nonempty data.frame.", call. = FALSE)
     }
     if (!is.function(analysis_function)) {
         stop("analysis_function must be a function.", call. = FALSE)
+    }
+    if (!is.null(comparator) && !is.function(comparator)) {
+        stop("comparator must be NULL or a function.", call. = FALSE)
     }
     output_type <- match.arg(output_type)
     stress_model <- match.arg(stress_model)
@@ -27,11 +30,13 @@ function (data, analysis_function, output_type = c("scalar",
     if (output_type == "ranked") {
         sparq_check_number(top_k, "top_k", 1, integer = TRUE)
     }
-    comparator <- switch(output_type, scalar = sparq_compare_scalar,
-        ranked = function(full_result, perturbed_result) {
-            sparq_compare_ranked(full_rank = full_result, perturbed_rank = perturbed_result,
-                k = top_k)
-        }, partition = sparq_compare_partition, graph = sparq_compare_graph)
+    if (is.null(comparator)) {
+        comparator <- switch(output_type, scalar = sparq_compare_scalar,
+            ranked = function(full_result, perturbed_result) {
+                sparq_compare_ranked(full_rank = full_result, perturbed_rank = perturbed_result,
+                    k = top_k)
+            }, partition = sparq_compare_partition, graph = sparq_compare_graph)
+    }
     sparq_inform(paste0("Preparing a ", output_type, " workflow assessment."), verbose)
     fit <- sparq_run(data = data, analysis_function = analysis_function,
         comparator = comparator, stress_model = stress_model,

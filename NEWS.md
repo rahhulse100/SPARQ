@@ -2,6 +2,12 @@
 
 ## Development
 
+- Added `sparq_compare_spatial_partition()` for an explicitly spatial
+  comparison of domain partitions: global ARI, one-hop-tolerant boundary F1,
+  and matched domain-adjacency Jaccard. Fixed and adaptive procurement
+  assessments now accept a declared custom comparator, allowing the spatial
+  partition comparison to be used without changing the legacy ARI default.
+
 - Added `sparq_assess_many()` and `sparq_report_many()` for paired evaluation
   of several user-defined analyses on one shared reference input and identical
   retained-spot sets. The report bundle writes a cross-analysis summary,

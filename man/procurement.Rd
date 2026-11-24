@@ -18,6 +18,7 @@ tissue, or recover biological information absent from a specimen.
 sparq_assess_procurement(
   data, analysis_function,
   output_type = c("scalar", "ranked", "partition", "graph"),
+  comparator = NULL,
   x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
   retention = NULL, n_iterations = NULL, preset = "standard",
   quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -29,6 +30,7 @@ sparq_assess_procurement(
 sparq_assess_procurement_adaptive(
   data, analysis_function,
   output_type = c("scalar", "ranked", "partition", "graph"),
+  comparator = NULL,
   x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
   retention = 0.75,
   quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -48,6 +50,9 @@ sparq_report_procurement(assessment, output_dir = NULL,
   complete or perturbed spot-level data frame.}
   \item{output_type}{One of \code{"scalar"}, \code{"ranked"},
   \code{"partition"}, or \code{"graph"}.}
+  \item{comparator}{Optional function replacing the default comparator for
+  \code{output_type}. It enables an explicitly declared output-specific
+  comparator such as \code{sparq_compare_spatial_partition}.}
   \item{x_col, y_col}{Optional finite numeric coordinate columns. They are
   required for \code{"contiguous_hole"} and \code{"edge_weighted"} scenarios.}
   \item{quality_col}{Optional finite numeric spot-level quality metric, such as

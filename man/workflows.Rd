@@ -15,7 +15,8 @@ assessment. They do not alter the original input object.
 }
 \section{Calling conventions}{\preformatted{
 sparq_assess_workflow(data, analysis_function,
-  output_type = c("scalar", "ranked", "partition", "graph"), ...)
+  output_type = c("scalar", "ranked", "partition", "graph"),
+  comparator = NULL, ...)
 
 sparq_preset(preset = c("quick", "standard", "thorough"))
 

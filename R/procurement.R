@@ -16,6 +16,9 @@
 #'   perturbed data frame.
 #' @param output_type One of `"scalar"`, `"ranked"`, `"partition"`, or
 #'   `"graph"`.
+#' @param comparator Optional output comparator. When supplied, it replaces the
+#'   default comparator for `output_type`. This enables an explicitly declared
+#'   output-specific comparison such as [sparq_compare_spatial_partition()].
 #' @param x_col,y_col Optional names of finite numeric coordinate columns.
 #'   They are required by `"contiguous_hole"` and `"edge_weighted"` scenarios.
 #' @param quality_col Optional name of a finite numeric spot-level quality
@@ -62,6 +65,7 @@
 sparq_assess_procurement <- function(
     data, analysis_function,
     output_type = c("scalar", "ranked", "partition", "graph"),
+    comparator = NULL,
     x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
     retention = NULL, n_iterations = NULL, preset = "standard",
     quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -81,6 +85,9 @@ sparq_assess_procurement <- function(
   }
   if (!is.function(analysis_function)) {
     stop("analysis_function must be a function.", call. = FALSE)
+  }
+  if (!is.null(comparator) && !is.function(comparator)) {
+    stop("comparator must be NULL or a function.", call. = FALSE)
   }
   if (xor(is.null(x_col), is.null(y_col))) {
     stop("Supply both x_col and y_col, or neither.", call. = FALSE)
@@ -197,6 +204,7 @@ sparq_assess_procurement <- function(
       data = data,
       analysis_function = analysis_function,
       output_type = output_type,
+      comparator = comparator,
       stress_model = "uniform_random",
       retention = retention,
       n_iterations = n_iterations,
@@ -325,6 +333,7 @@ sparq_assess_procurement <- function(
 sparq_assess_procurement_adaptive <- function(
     data, analysis_function,
     output_type = c("scalar", "ranked", "partition", "graph"),
+    comparator = NULL,
     x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
     retention = 0.75, quality_direction = c("higher_quality_retained", "lower_quality_retained"),
     quality_strength = 1, edge_strength = 1, top_k = 100,
@@ -340,6 +349,9 @@ sparq_assess_procurement_adaptive <- function(
   }
   if (!is.function(analysis_function)) {
     stop("analysis_function must be a function.", call. = FALSE)
+  }
+  if (!is.null(comparator) && !is.function(comparator)) {
+    stop("comparator must be NULL or a function.", call. = FALSE)
   }
   if (xor(is.null(x_col), is.null(y_col))) {
     stop("Supply both x_col and y_col, or neither.", call. = FALSE)
@@ -386,14 +398,16 @@ sparq_assess_procurement_adaptive <- function(
       paste(unavailable, collapse = ", "), ".", call. = FALSE)
   }
 
-  comparator <- switch(output_type,
-    scalar = sparq_compare_scalar,
-    ranked = function(full_result, perturbed_result) {
-      sparq_compare_ranked(full_result, perturbed_result, k = top_k)
-    },
-    partition = sparq_compare_partition,
-    graph = sparq_compare_graph
-  )
+  if (is.null(comparator)) {
+    comparator <- switch(output_type,
+      scalar = sparq_compare_scalar,
+      ranked = function(full_result, perturbed_result) {
+        sparq_compare_ranked(full_result, perturbed_result, k = top_k)
+      },
+      partition = sparq_compare_partition,
+      graph = sparq_compare_graph
+    )
+  }
   reference_result <- if (is.null(full_result)) {
     sparq_with_seed(sparq_seed(seed, 0L, 501L), analysis_function(data))
   } else {

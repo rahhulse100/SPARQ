@@ -172,6 +172,46 @@ The four built-in result classes are:
 For a result outside these classes, use `sparq_custom_analysis()` and supply a
 comparator that returns a non-negative `instability` column.
 
+### Spatial domain partitions
+
+For a spatial-domain method such as BANKSY, global ARI can be supplemented by
+two explicitly spatial quantities: tolerant boundary F1 and domain-adjacency
+Jaccard. A boundary spot has at least one neighbor in another domain; a
+one-hop tolerance treats a small interface displacement as agreement. Domain
+adjacency asks whether pairs of touching domains remain touching after
+one-to-one maximum-overlap label matching. The spatial graph must be declared
+before examining held-out outcomes.
+
+```r
+# Two columns of spot IDs defining the fixed native spatial neighborhood graph.
+banksy_edges <- baseline_neighbor_edges
+
+domain_comparator <- function(reference_labels, rerun_labels) {
+  sparq_compare_spatial_partition(
+    reference_labels,
+    rerun_labels,
+    edges = banksy_edges,
+    weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1)
+  )
+}
+
+assessment <- sparq_assess_procurement_adaptive(
+  data = spot_data,
+  analysis_function = run_banksy_domains,
+  output_type = "partition",
+  comparator = domain_comparator,
+  x_col = "x", y_col = "y", quality_col = "library_size",
+  reliability_tolerance = 0.40,
+  required_reliability = 0.90,
+  reliability_confidence = 0.95
+)
+```
+
+Here `reliability_tolerance = 0.40` means a weighted agreement of at least
+0.60. The weights and tolerance are study choices, not quantities SPARQ learns
+from pathology or a held-out clean result. The comparator does not reconstruct
+missing spots or alter BANKSY labels.
+
 The assessment functions remain separate by design.  `sparq_assess_many()` is
 for several analyses on the same retained-spot sets;
 `sparq_assess_procurement()` is for one analysis across declared support-loss
