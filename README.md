@@ -240,6 +240,7 @@ assessment <- sparq_assess_script(
   input_object = "seurat_obj",
   result_object = "banksy_domains",
   output_type = "partition",
+  partition_graph = banksy_native_neighbor_edges,
   retention = 0.75,
   n_iterations = 100
 )
@@ -262,6 +263,7 @@ assessment <- sparq_assess_spatial(
     # Return named spot labels, e.g. setNames(new_domains, colnames(x)).
   },
   output_type = "partition",
+  partition_graph = banksy_native_neighbor_edges,
   retention = 0.75,
   n_iterations = 100
 )
@@ -408,6 +410,7 @@ cohort <- sparq_assess_cohort_workflow(
   sample_data = sections,
   analysis_function = run_analysis,
   output_type = "partition",
+  partition_graph = native_neighbor_edges,
   preset = "standard",
   output_dir = "sparq_cohort_output"
 )

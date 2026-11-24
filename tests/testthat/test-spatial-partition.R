@@ -78,7 +78,8 @@ test_that("spatial partition comparator can drive an adaptive assessment", {
   }
   x <- sparq_assess_procurement_adaptive(
     data = spots, analysis_function = analysis, output_type = "partition",
-    comparator = comparator, x_col = "x", y_col = "y", retention = 0.75,
+    comparator = comparator, partition_graph = edges,
+    x_col = "x", y_col = "y", retention = 0.75,
     scenarios = "uniform_random", reliability_tolerance = 0.5,
     min_iterations = 2, max_iterations = 2, batch_size = 1, verbose = FALSE
   )
@@ -102,7 +103,8 @@ test_that("spatial partition comparator can drive a fixed procurement assessment
   }
   x <- sparq_assess_procurement(
     data = spots, analysis_function = analysis, output_type = "partition",
-    comparator = comparator, x_col = "x", y_col = "y", retention = 0.75,
+    comparator = comparator, partition_graph = edges,
+    x_col = "x", y_col = "y", retention = 0.75,
     n_iterations = 2, scenarios = "uniform_random", preflight = FALSE,
     min_iterations = 2, instability_bootstrap_B = 20, verbose = FALSE
   )

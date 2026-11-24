@@ -337,6 +337,9 @@ sparq_assess_procurement <- function(
 #'   reference_scale,seed,verbose See [sparq_assess_procurement()].
 #' @param output_type One of `"scalar"`, `"ranked"`, `"partition"`, or
 #'   `"graph"`.
+#' @param comparator,partition_graph,partition_weights See
+#'   [sparq_assess_procurement()]. A partition assessment always requires its
+#'   declared native graph, including with a custom comparator.
 #' @param top_k Ranking depth for a ranked result.
 #' @param retention Fraction of spots retained in every scenario.
 #' @param reliability_tolerance Maximum normalized comparator distance that is

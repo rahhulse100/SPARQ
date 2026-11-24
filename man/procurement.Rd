@@ -87,6 +87,12 @@ rerunning the baseline analysis.}
   spot-removal rerun before the scenario assessments. The preflight reference
   is reused by all scenarios.}
   \item{verbose}{Whether to print progress.}
+  \item{reliability_tolerance}{Maximum normalized comparator distance that is
+  considered preserved. This must be declared by the caller.}
+  \item{required_reliability}{Required fraction of preserved perturbations.}
+  \item{reliability_confidence}{Confidence level used for each scenario's
+  confidence sequence.}
+  \item{batch_size, min_iterations, max_iterations}{Adaptive stopping controls.}
   \item{...}{Additional arguments to \code{sparq_assess_workflow}, including
   \code{reliability_tolerance}, \code{required_reliability}, or
   \code{cache_dir}.}
