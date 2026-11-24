@@ -1,7 +1,12 @@
 test_that("output-specific analysis specifications record explicit rules", {
+  partition_edges <- data.frame(
+    source = c("spot_1", "spot_2", "spot_3"),
+    target = c("spot_2", "spot_3", "spot_4")
+  )
   partition <- sparq_partition_analysis(
     analysis_function = function(x) setNames(ifelse(x$value > 0, "high", "low"), x$id),
-    min_ari = 0.60
+    spatial_graph = partition_edges,
+    min_agreement = 0.60
   )
   ranked <- sparq_ranked_analysis(
     analysis_function = function(x) c("g1", "g2", "g3"),
@@ -20,19 +25,23 @@ test_that("output-specific analysis specifications record explicit rules", {
 
   expect_s3_class(partition, "sparq_analysis_spec")
   expect_equal(partition$output_type, "partition")
+  expect_equal(partition$partition_graph,
+    .sparq_spatial_partition_edges(partition_edges))
+  expect_equal(partition$partition_weights,
+    c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1))
   expect_equal(partition$decision_rule$reliability_tolerance, 0.40)
   expect_equal(ranked$top_k, 2L)
   expect_equal(ranked$decision_rule$reliability_tolerance, 0.30)
   expect_equal(graph$decision_rule$reliability_tolerance, 0.20)
   expect_equal(scalar$decision_rule$reliability_tolerance, 0.15)
   expect_equal(scalar$reference_scale, 2)
-  expect_output(print(partition), "adjusted_Rand_index")
+  expect_output(print(partition), "weighted_spatial_partition_agreement")
 })
 
 test_that("analysis specifications require explicit valid preservation rules", {
   expect_error(
-    sparq_partition_analysis(function(x) x, min_ari = 1.1),
-    "min_ari"
+    sparq_partition_analysis(function(x) x, data.frame(source = "a", target = "b"), min_agreement = 1.1),
+    "min_agreement"
   )
   expect_error(
     sparq_ranked_analysis(function(x) x, top_k = 0, min_jaccard = 0.6),
@@ -58,7 +67,8 @@ test_that("sparq_assess_many applies each analysis specification separately", {
   analyses <- list(
     domains = sparq_partition_analysis(
       function(x) setNames(ifelse(x$value > 0, "high", "low"), x$id),
-      min_ari = 0.60
+      spatial_graph = data.frame(source = spots$id[-nrow(spots)], target = spots$id[-1L]),
+      min_agreement = 0.60
     ),
     genes = sparq_ranked_analysis(
       function(x) c("g1", "g2", "g3"),

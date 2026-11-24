@@ -22,7 +22,12 @@
 #' @param reliability_confidence Confidence level for a reliability decision.
 #' @param reference_scale Positive scale for scalar or custom instability.
 #' @param top_k Number of leading ranked features to compare.
-#' @param min_ari Minimum adjusted Rand index that counts as preservation.
+#' @param spatial_graph A declared two-column native spatial-neighbor graph.
+#'   Its first two columns are spot IDs. It is required for a partition result.
+#' @param min_agreement Minimum weighted spatial partition agreement that counts
+#'   as preservation.
+#' @param partition_weights Named nonnegative weights for global ARI, tolerant
+#'   boundary F1, and domain-adjacency Jaccard. They are normalized internally.
 #' @param min_jaccard Minimum top-k Jaccard overlap that counts as preservation.
 #' @param min_edge_jaccard Minimum edge Jaccard overlap that counts as
 #'   preservation.
@@ -85,19 +90,30 @@ sparq_analysis_spec <- function(
 #' @rdname sparq_analysis_spec
 #' @export
 sparq_partition_analysis <- function(
-    analysis_function, min_ari,
+    analysis_function, spatial_graph, min_agreement,
+    partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
     required_reliability = 0.90,
     reliability_confidence = 0.95) {
-  sparq_check_number(min_ari, "min_ari", 0, 1)
-  sparq_analysis_spec(
+  spatial_graph <- .sparq_spatial_partition_edges(spatial_graph)
+  sparq_check_number(min_agreement, "min_agreement", 0, 1)
+  comparator <- function(full_result, perturbed_result) {
+    sparq_compare_partition(
+      full_result, perturbed_result,
+      edges = spatial_graph, weights = partition_weights
+    )
+  }
+  out <- sparq_analysis_spec(
     analysis_function = analysis_function,
     output_type = "partition",
-    comparator = sparq_compare_partition,
-    reliability_tolerance = 1 - min_ari,
+    comparator = comparator,
+    reliability_tolerance = 1 - min_agreement,
     required_reliability = required_reliability,
     reliability_confidence = reliability_confidence,
-    rule_name = paste0("adjusted_Rand_index >= ", format(min_ari, trim = TRUE))
+    rule_name = paste0("weighted_spatial_partition_agreement >= ", format(min_agreement, trim = TRUE))
   )
+  out$partition_graph <- spatial_graph
+  out$partition_weights <- partition_weights
+  out
 }
 
 #' @rdname sparq_analysis_spec

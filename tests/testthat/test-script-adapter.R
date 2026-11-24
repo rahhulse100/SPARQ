@@ -9,6 +9,7 @@ test_that("script adapter injects input and retrieves the declared result", {
   set.seed(3)
   data <- data.frame(value = rnorm(40), x = runif(40), y = runif(40))
   rownames(data) <- paste0("spot_", seq_len(nrow(data)))
+  edges <- data.frame(source = rownames(data)[-nrow(data)], target = rownames(data)[-1L])
 
   fit <- sparq_assess_script(
     data = data,
@@ -16,6 +17,7 @@ test_that("script adapter injects input and retrieves the declared result", {
     input_object = "seurat_obj",
     result_object = "banksy_domains",
     output_type = "partition",
+    partition_graph = edges,
     retention = 0.75,
     n_iterations = 5,
     min_iterations = 3,

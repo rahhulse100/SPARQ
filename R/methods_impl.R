@@ -314,7 +314,7 @@ function (full_edges, perturbed_edges)
     j <- length(intersect(a, b))/length(u)
     data.frame(edge_jaccard = j, instability = 1 - j)
 }
-sparq_compare_partition <-
+.sparq_partition_ari_component <-
 function (full_labels, perturbed_labels)
 {
     a_names <- names(full_labels)

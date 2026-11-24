@@ -19,6 +19,11 @@
 #' @param comparator Optional output comparator. When supplied, it replaces the
 #'   default comparator for `output_type`. This enables an explicitly declared
 #'   output-specific comparison such as [sparq_compare_spatial_partition()].
+#' @param partition_graph Declared native spatial-neighbor graph for a
+#'   partition assessment. It is required even when a custom comparator is
+#'   supplied, so the analysis's native graph remains auditable.
+#' @param partition_weights Named weights for ARI, tolerant boundary F1, and
+#'   domain-adjacency Jaccard.
 #' @param x_col,y_col Optional names of finite numeric coordinate columns.
 #'   They are required by `"contiguous_hole"` and `"edge_weighted"` scenarios.
 #' @param quality_col Optional name of a finite numeric spot-level quality
@@ -66,6 +71,8 @@ sparq_assess_procurement <- function(
     data, analysis_function,
     output_type = c("scalar", "ranked", "partition", "graph"),
     comparator = NULL,
+    partition_graph = NULL,
+    partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
     x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
     retention = NULL, n_iterations = NULL, preset = "standard",
     quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -75,6 +82,14 @@ sparq_assess_procurement <- function(
 
   output_type <- match.arg(output_type)
   quality_direction <- match.arg(quality_direction)
+  validated_partition_graph <- if (output_type == "partition") {
+    if (is.null(partition_graph)) {
+      stop("partition_graph is required for a partition assessment; supply the native spatial-neighbor graph used by the analysis.", call. = FALSE)
+    }
+    .sparq_spatial_partition_edges(partition_graph)
+  } else {
+    NULL
+  }
   sparq_check_number(reference_scale, "reference_scale")
   sparq_check_number(seed, "seed", 0, integer = TRUE)
   sparq_check_number(quality_strength, "quality_strength", 0)
@@ -158,7 +173,8 @@ sparq_assess_procurement <- function(
     preflight_result <- sparq_validate_workflow(
       data = data, analysis_function = analysis_function,
       output_type = output_type, stress_model = "uniform_random",
-      x_col = x_col, y_col = y_col, seed = seed, verbose = verbose
+      x_col = x_col, y_col = y_col, partition_graph = partition_graph,
+      seed = seed, verbose = verbose
     )
   }
 
@@ -205,6 +221,8 @@ sparq_assess_procurement <- function(
       analysis_function = analysis_function,
       output_type = output_type,
       comparator = comparator,
+      partition_graph = partition_graph,
+      partition_weights = partition_weights,
       stress_model = "uniform_random",
       retention = retention,
       n_iterations = n_iterations,
@@ -295,7 +313,9 @@ sparq_assess_procurement <- function(
       quality_strength = quality_strength,
       edge_strength = edge_strength,
       reference_scale = reference_scale,
-      seed = seed
+      seed = seed,
+      partition_graph_fingerprint = if (is.null(validated_partition_graph)) NA_character_ else sparq_fingerprint(validated_partition_graph),
+      partition_weights = if (is.null(validated_partition_graph)) NULL else partition_weights
     ),
     interpretation = interpretation
   )
@@ -334,6 +354,8 @@ sparq_assess_procurement_adaptive <- function(
     data, analysis_function,
     output_type = c("scalar", "ranked", "partition", "graph"),
     comparator = NULL,
+    partition_graph = NULL,
+    partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
     x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
     retention = 0.75, quality_direction = c("higher_quality_retained", "lower_quality_retained"),
     quality_strength = 1, edge_strength = 1, top_k = 100,
@@ -344,6 +366,14 @@ sparq_assess_procurement_adaptive <- function(
 
   output_type <- match.arg(output_type)
   quality_direction <- match.arg(quality_direction)
+  validated_partition_graph <- if (output_type == "partition") {
+    if (is.null(partition_graph)) {
+      stop("partition_graph is required for a partition assessment; supply the native spatial-neighbor graph used by the analysis.", call. = FALSE)
+    }
+    .sparq_spatial_partition_edges(partition_graph)
+  } else {
+    NULL
+  }
   if (!is.data.frame(data) || !nrow(data)) {
     stop("data must be a nonempty data.frame.", call. = FALSE)
   }
@@ -398,13 +428,17 @@ sparq_assess_procurement_adaptive <- function(
       paste(unavailable, collapse = ", "), ".", call. = FALSE)
   }
 
-  if (is.null(comparator)) {
+  if (is.null(comparator) && output_type == "partition") {
+    comparator <- function(full_result, perturbed_result) {
+      sparq_compare_partition(full_result, perturbed_result,
+        edges = partition_graph, weights = partition_weights)
+    }
+  } else if (is.null(comparator)) {
     comparator <- switch(output_type,
       scalar = sparq_compare_scalar,
       ranked = function(full_result, perturbed_result) {
         sparq_compare_ranked(full_result, perturbed_result, k = top_k)
       },
-      partition = sparq_compare_partition,
       graph = sparq_compare_graph
     )
   }
@@ -465,7 +499,9 @@ sparq_assess_procurement_adaptive <- function(
       required_reliability = required_reliability,
       reliability_confidence = reliability_confidence, batch_size = batch_size,
       min_iterations = min_iterations, max_iterations = max_iterations,
-      reference_scale = reference_scale, seed = seed),
+      reference_scale = reference_scale, seed = seed,
+      partition_graph_fingerprint = if (is.null(validated_partition_graph)) NA_character_ else sparq_fingerprint(validated_partition_graph),
+      partition_weights = if (is.null(validated_partition_graph)) NULL else partition_weights),
     interpretation = "Each declared support-loss scenario was evaluated independently with adaptive stopping. SPARQ assesses sensitivity; it does not reconstruct unavailable tissue or correct the original analysis."
   )
   class(out) <- c("sparq_procurement_adaptive_assessment", "sparq_procurement_assessment")

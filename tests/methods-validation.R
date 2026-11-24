@@ -55,9 +55,10 @@ function (full_size = FALSE)
     check(abs(sparq_compare_ranked(c("a", "b", "c"), c("b", "c", 
         "d"), 2)$replacement - 0.5) < 9.9999999999999998e-13, 
         "top-feature replacement fraction")
+    partition_edges <- data.frame(source = c("a", "b", "c"), target = c("b", "c", "d"))
     check(sparq_compare_partition(c(a = 1, b = 1, c = 2, d = 2), 
-        c(d = 9, c = 9, a = 8))$ari == 1, "partition IDs align after removal/reordering")
-    check(errors(sparq_compare_partition(1:4, 1:3)), "unnamed unequal partitions rejected")
+        c(d = 9, c = 9, a = 8), partition_edges)$ari == 1, "partition IDs align after removal/reordering")
+    check(errors(sparq_compare_partition(1:4, 1:3, partition_edges)), "unnamed unequal partitions rejected")
     check(abs(sparq_compare_graph(c("a-b", "b-c"), c("b-c", "c-d"))$instability - 
         2/3) < 9.9999999999999998e-13, "graph Jaccard")
     cmp <- data.frame(delta = c(-0.10000000000000001, 0.10000000000000001), 

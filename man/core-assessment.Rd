@@ -5,7 +5,6 @@
 \alias{sparq_stress_model}
 \alias{sparq_compare_scalar}
 \alias{sparq_compare_ranked}
-\alias{sparq_compare_partition}
 \alias{sparq_compare_graph}
 \alias{sparq_support_from_comparisons}
 \alias{sparq_bound01}
@@ -26,7 +25,6 @@ sparq_assess(full_result, perturbed_results, comparator, ...)
 
 sparq_compare_scalar(full_result, perturbed_result)
 sparq_compare_ranked(full_rank, perturbed_rank, k = 100)
-sparq_compare_partition(full_partition, perturbed_partition)
 sparq_compare_graph(full_graph, perturbed_graph)
 
 sparq_support_from_comparisons(comparison_table, n_iterations = nrow(comparison_table), ...)
@@ -65,6 +63,5 @@ returns a one-row support-quality table.
 \examples{
 sparq_compare_scalar(1, 0.8)
 sparq_compare_ranked(c("A", "B", "C"), c("B", "A", "D"), k = 2)
-sparq_compare_partition(c(a = "one", b = "two"), c(a = "one", b = "one"))
 sparq_compare_graph(c("a--b", "b--c"), c("a--b"))
 }

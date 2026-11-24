@@ -11,7 +11,9 @@ function (data, analysis_function, output_type = c("scalar",
     min_iterations = NULL, instability_bootstrap_B = NULL,
     reliability_tolerance = NULL, required_reliability = 0.9,
     reliability_confidence = 0.95, loss_model = NULL,
-    full_result = NULL, keep_perturbed_results = FALSE, comparator = NULL, ...)
+    full_result = NULL, keep_perturbed_results = FALSE, comparator = NULL,
+    partition_graph = NULL,
+    partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1), ...)
 {
     if (!is.data.frame(data) || !nrow(data)) {
         stop("data must be a nonempty data.frame.", call. = FALSE)
@@ -30,12 +32,23 @@ function (data, analysis_function, output_type = c("scalar",
     if (output_type == "ranked") {
         sparq_check_number(top_k, "top_k", 1, integer = TRUE)
     }
-    if (is.null(comparator)) {
+    if (output_type == "partition") {
+        if (is.null(partition_graph)) {
+            stop("partition_graph is required for a partition assessment; supply the native spatial-neighbor graph used by the analysis.", call. = FALSE)
+        }
+        .sparq_spatial_partition_edges(partition_graph)
+    }
+    if (is.null(comparator) && output_type == "partition") {
+        comparator <- function(full_result, perturbed_result) {
+            sparq_compare_partition(full_result, perturbed_result,
+                edges = partition_graph, weights = partition_weights)
+        }
+    } else if (is.null(comparator)) {
         comparator <- switch(output_type, scalar = sparq_compare_scalar,
             ranked = function(full_result, perturbed_result) {
                 sparq_compare_ranked(full_rank = full_result, perturbed_rank = perturbed_result,
                     k = top_k)
-            }, partition = sparq_compare_partition, graph = sparq_compare_graph)
+            }, graph = sparq_compare_graph)
     }
     sparq_inform(paste0("Preparing a ", output_type, " workflow assessment."), verbose)
     fit <- sparq_run(data = data, analysis_function = analysis_function,
@@ -55,6 +68,11 @@ function (data, analysis_function, output_type = c("scalar",
         keep_perturbed_results = keep_perturbed_results,
         ...)
     fit$output_type <- output_type
+    validated_partition_graph <- if (output_type == "partition") {
+        .sparq_spatial_partition_edges(partition_graph)
+    } else {
+        NULL
+    }
     fit$workflow <- list(output_type = output_type, stress_model = stress_model,
         retention = fit$settings$retention, n_iterations = fit$settings$n_iterations,
         preset = fit$settings$preset, top_k = if (output_type ==
@@ -63,7 +81,9 @@ function (data, analysis_function, output_type = c("scalar",
         } else {
             NA_integer_
         }, x_col = x_col, y_col = y_col, seed = seed,
-        loss_model = loss_model)
+        loss_model = loss_model,
+        partition_graph_fingerprint = if (is.null(validated_partition_graph)) NA_character_ else sparq_fingerprint(validated_partition_graph),
+        partition_weights = if (is.null(validated_partition_graph)) NULL else partition_weights)
     fit$fragility <- NULL
     class(fit) <- unique(c("sparq_workflow_assessment", class(fit)))
     fit

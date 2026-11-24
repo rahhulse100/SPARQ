@@ -51,6 +51,10 @@ sparq_assess_spatial(object, analysis_function,
   \item{preflight_retention}{The fraction retained in the one small dry-run
   perturbation; by default 95 percent.}
   \item{comparator}{A function comparing reference and perturbed results.}
+  \item{partition_graph}{Declared native spatial-neighbor graph required when
+  assessing a partition, including when an explicit comparator is supplied.}
+  \item{partition_weights}{Named weights for global ARI, tolerant boundary F1,
+  and domain-adjacency Jaccard.}
   \item{support_threshold}{A prespecified decision threshold for adaptive
   stopping. It is never inferred from the reference result.}
   \item{reliability_tolerance}{Optional prespecified normalized comparator

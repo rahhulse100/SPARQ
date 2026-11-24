@@ -12,7 +12,8 @@ sparq_analysis_spec(analysis_function, output_type, comparator,
   reliability_confidence = 0.95, reference_scale = 1,
   top_k = NULL, rule_name = "custom")
 
-sparq_partition_analysis(analysis_function, min_ari,
+sparq_partition_analysis(analysis_function, spatial_graph, min_agreement,
+  partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
   required_reliability = 0.90, reliability_confidence = 0.95)
 
 sparq_ranked_analysis(analysis_function, top_k, min_jaccard,
@@ -40,7 +41,9 @@ sparq_custom_analysis(analysis_function, comparator, reliability_tolerance,
   \item{reference_scale}{Positive scale used for scalar or custom instability.}
   \item{top_k}{Number of leading ranked features to compare.}
   \item{rule_name}{Human-readable description of a custom preservation rule.}
-  \item{min_ari}{Minimum adjusted Rand index that counts as preservation.}
+  \item{spatial_graph}{Declared two-column native spatial-neighbor graph. Its first two columns are spot IDs. It is required for a partition result.}
+  \item{min_agreement}{Minimum weighted spatial partition agreement that counts as preservation.}
+  \item{partition_weights}{Named nonnegative weights for global ARI, tolerant boundary F1, and domain-adjacency Jaccard. They are normalized internally.}
   \item{min_jaccard}{Minimum top-k Jaccard overlap that counts as preservation.}
   \item{min_edge_jaccard}{Minimum edge Jaccard overlap that counts as preservation.}
   \item{max_normalized_change}{Largest normalized scalar change that counts as preservation.}
@@ -59,6 +62,7 @@ comparator must return a non-negative \code{instability} column.
 \examples{
 domain_spec <- sparq_partition_analysis(
   function(x) setNames(ifelse(x$value > 0, "high", "low"), x$id),
-  min_ari = 0.60
+  spatial_graph = data.frame(source = c("a", "b"), target = c("b", "c")),
+  min_agreement = 0.60
 )
 }

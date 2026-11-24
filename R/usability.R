@@ -85,6 +85,7 @@ sparq_validate_workflow <- function(data, analysis_function,
                                     stress_model = c("uniform_random", "contiguous_hole", "none", "custom"),
                                     x_col = NULL, y_col = NULL,
                                     spot_id_column = NULL, custom_function = NULL,
+                                    partition_graph = NULL,
                                     preflight_retention = 0.95, seed = 1,
                                     verbose = TRUE) {
   if (!is.data.frame(data) || !nrow(data)) {
@@ -131,6 +132,17 @@ sparq_validate_workflow <- function(data, analysis_function,
   }
   if (anyNA(input_ids) || any(!nzchar(input_ids)) || anyDuplicated(input_ids)) {
     stop("Input spot IDs must be unique and nonmissing.", call. = FALSE)
+  }
+  if (output_type == "partition") {
+    if (is.null(partition_graph)) {
+      stop("partition_graph is required for a partition assessment; supply the native spatial-neighbor graph used by the analysis.", call. = FALSE)
+    }
+    graph <- .sparq_spatial_partition_edges(partition_graph)
+    vertices <- unique(c(graph$source, graph$target))
+    missing_vertices <- setdiff(input_ids, vertices)
+    if (length(missing_vertices)) {
+      stop("partition_graph lacks input spot IDs: ", paste(head(missing_vertices, 5L), collapse = ", "), call. = FALSE)
+    }
   }
 
   validate_output <- function(result, expected_ids, stage) {

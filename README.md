@@ -139,7 +139,8 @@ SPARQ does not assign a biological tolerance silently.
 ```r
 domain_analysis <- sparq_partition_analysis(
   analysis_function = run_domains,
-  min_ari = 0.60
+  spatial_graph = banksy_native_neighbor_edges,
+  min_agreement = 0.60
 )
 
 gene_analysis <- sparq_ranked_analysis(
@@ -164,7 +165,7 @@ The four built-in result classes are:
 
 | Result class | Examples | Comparator | Preservation rule |
 | --- | --- | --- | --- |
-| `partition` | domains, clusters, cell labels | adjusted Rand index | explicit minimum ARI |
+| `partition` | spatial domains, clusters, cell labels | global ARI + tolerant boundary F1 + domain-adjacency Jaccard | explicit minimum weighted spatial agreement |
 | `ranked` | genes, pathways, ligand--receptor pairs | top-*k* Jaccard, replacement, rank correlation | explicit minimum top-*k* Jaccard |
 | `graph` | neighborhood or interaction edges | edge Jaccard | explicit minimum edge Jaccard |
 | `scalar` | activity, abundance, effect size | normalized absolute change | explicit maximum normalized change |
@@ -174,32 +175,23 @@ comparator that returns a non-negative `instability` column.
 
 ### Spatial domain partitions
 
-For a spatial-domain method such as BANKSY, global ARI can be supplemented by
-two explicitly spatial quantities: tolerant boundary F1 and domain-adjacency
-Jaccard. A boundary spot has at least one neighbor in another domain; a
-one-hop tolerance treats a small interface displacement as agreement. Domain
-adjacency asks whether pairs of touching domains remain touching after
-one-to-one maximum-overlap label matching. The spatial graph must be declared
-before examining held-out outcomes.
+For a spatial-domain method such as BANKSY, SPARQ uses three quantities by
+default: global ARI, tolerant boundary F1, and domain-adjacency Jaccard. A
+boundary spot has at least one neighbor in another domain; a one-hop tolerance
+treats a small interface displacement as agreement. Domain adjacency asks
+whether pairs of touching domains remain touching after one-to-one
+maximum-overlap label matching. The analysis's native spatial graph is
+required; SPARQ never silently substitutes a generic k-nearest-neighbor graph.
 
 ```r
 # Two columns of spot IDs defining the fixed native spatial neighborhood graph.
 banksy_edges <- baseline_neighbor_edges
 
-domain_comparator <- function(reference_labels, rerun_labels) {
-  sparq_compare_spatial_partition(
-    reference_labels,
-    rerun_labels,
-    edges = banksy_edges,
-    weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1)
-  )
-}
-
 assessment <- sparq_assess_procurement_adaptive(
   data = spot_data,
   analysis_function = run_banksy_domains,
   output_type = "partition",
-  comparator = domain_comparator,
+  partition_graph = banksy_edges,
   x_col = "x", y_col = "y", quality_col = "library_size",
   reliability_tolerance = 0.40,
   required_reliability = 0.90,

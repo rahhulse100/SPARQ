@@ -19,6 +19,8 @@ sparq_assess_procurement(
   data, analysis_function,
   output_type = c("scalar", "ranked", "partition", "graph"),
   comparator = NULL,
+  partition_graph = NULL,
+  partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
   x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
   retention = NULL, n_iterations = NULL, preset = "standard",
   quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -31,6 +33,8 @@ sparq_assess_procurement_adaptive(
   data, analysis_function,
   output_type = c("scalar", "ranked", "partition", "graph"),
   comparator = NULL,
+  partition_graph = NULL,
+  partition_weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1),
   x_col = NULL, y_col = NULL, quality_col = NULL, scenarios = NULL,
   retention = 0.75,
   quality_direction = c("higher_quality_retained", "lower_quality_retained"),
@@ -51,8 +55,12 @@ sparq_report_procurement(assessment, output_dir = NULL,
   \item{output_type}{One of \code{"scalar"}, \code{"ranked"},
   \code{"partition"}, or \code{"graph"}.}
   \item{comparator}{Optional function replacing the default comparator for
-  \code{output_type}. It enables an explicitly declared output-specific
-  comparator such as \code{sparq_compare_spatial_partition}.}
+  \code{output_type}.}
+  \item{partition_graph}{Declared native spatial-neighbor graph for a partition
+  assessment. It is required even when \code{comparator} is supplied, so the
+  analysis's native graph remains auditable.}
+  \item{partition_weights}{Named weights for ARI, tolerant boundary F1, and
+  domain-adjacency Jaccard.}
   \item{x_col, y_col}{Optional finite numeric coordinate columns. They are
   required for \code{"contiguous_hole"} and \code{"edge_weighted"} scenarios.}
   \item{quality_col}{Optional finite numeric spot-level quality metric, such as

@@ -3,11 +3,13 @@ test_that("spatial partition comparator is label invariant", {
   full <- c(a = "tumor", b = "tumor", c = "stroma", d = "stroma")
   rerun <- c(a = "two", b = "two", c = "one", d = "one")
   x <- sparq_compare_spatial_partition(full, rerun, edges)
+  y <- sparq_compare_partition(full, rerun, edges)
 
   expect_equal(x$ari, 1)
   expect_equal(x$boundary_f1, 1)
   expect_equal(x$adjacency_jaccard, 1)
   expect_equal(x$instability, 0)
+  expect_equal(y, x)
 })
 
 test_that("boundary agreement permits one-hop displacement", {

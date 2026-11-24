@@ -35,10 +35,18 @@ sparq_assess_many <- function(
   retention <- resolved$retention; n_iterations <- resolved$n_iterations
   verbose <- resolved$verbose
   comparator_for <- function(spec) {
-    if (is.function(spec$comparator)) return(spec$comparator)
     type <- match.arg(spec$output_type, c("scalar", "ranked", "partition", "graph"))
+    if (type == "partition") {
+      if (is.null(spec$partition_graph)) {
+        stop("A partition analysis must use sparq_partition_analysis() with its declared native spatial graph.", call. = FALSE)
+      }
+      .sparq_spatial_partition_edges(spec$partition_graph)
+    }
+    if (is.function(spec$comparator)) return(spec$comparator)
     if (type == "scalar") return(sparq_compare_scalar)
-    if (type == "partition") return(sparq_compare_partition)
+    if (type == "partition") {
+      stop("A partition analysis must use sparq_partition_analysis() with its declared native spatial graph.", call. = FALSE)
+    }
     if (type == "graph") return(sparq_compare_graph)
     k <- if (is.null(spec$top_k)) 100L else as.integer(spec$top_k)
     function(full, perturbed) sparq_compare_ranked(full, perturbed, k = k)

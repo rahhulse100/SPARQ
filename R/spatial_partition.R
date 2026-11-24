@@ -211,7 +211,7 @@ sparq_compare_spatial_partition <- function(
   }
   weights <- weights[needed] / sum(weights)
 
-  ari <- sparq_compare_partition(aligned$full, aligned$perturbed)$ari
+  ari <- .sparq_partition_ari_component(aligned$full, aligned$perturbed)$ari
   full_boundary <- .sparq_partition_boundary_spots(aligned$full, undirected)
   perturbed_boundary <- .sparq_partition_boundary_spots(aligned$perturbed, undirected)
   full_reachable <- .sparq_one_hop_closure(full_boundary, graph)
@@ -251,5 +251,27 @@ sparq_compare_spatial_partition <- function(
     n_reference_boundary_spots = length(full_boundary),
     n_rerun_boundary_spots = length(perturbed_boundary),
     stringsAsFactors = FALSE
+  )
+}
+
+#' Compare spatial-domain partitions in their native spatial output space
+#'
+#' This is SPARQ's public comparator for partition-valued spatial analyses.
+#' It requires the analysis's declared native neighborhood graph and combines
+#' global label agreement, tolerant boundary agreement, and domain-adjacency
+#' agreement. It does not use pathology or an external clean reference.
+#'
+#' @inheritParams sparq_compare_spatial_partition
+#' @return A one-row spatial partition comparison table. See
+#'   [sparq_compare_spatial_partition()] for its columns.
+#' @export
+sparq_compare_partition <- function(
+    full_labels, perturbed_labels, edges,
+    weights = c(ari = 1, boundary_f1 = 1, adjacency_jaccard = 1)) {
+  sparq_compare_spatial_partition(
+    full_labels = full_labels,
+    perturbed_labels = perturbed_labels,
+    edges = edges,
+    weights = weights
   )
 }

@@ -16,11 +16,13 @@ test_that("workflow preflight validates scalar reruns without launching a full a
 
 test_that("workflow preflight rejects partition labels that do not align to retained spots", {
   spots <- data.frame(value = 1:30, x = 1:30, y = 30:1)
+  edges <- data.frame(source = as.character(1:29), target = as.character(2:30))
   expect_error(
     sparq_validate_workflow(
       data = spots,
       analysis_function = function(x) setNames(rep("domain", nrow(x)), paste0("wrong_", seq_len(nrow(x)))),
       output_type = "partition",
+      partition_graph = edges,
       verbose = FALSE
     ),
     "spot IDs do not match retained data"
